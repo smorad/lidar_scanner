@@ -86,17 +86,32 @@ class Lidar:
 
     def scan(self):
         while(self.servo.pos < 180):
+            logging.info('Scanning horizon at phi = %f deg', self.servo.pos)
             self.scan_horizon()
             self.servo.increment_deg()
+        self.servo.reset_pos()
 
-    def scan_horizon(self):
+    def scan_horizon(self, theta_swath, phi):
+        '''
+        Scans from zero to theta_swath, then saves the resulting data in
+        cartesian form
+        '''
+        # include "sensor.h"
+        # distance_values = new Data()
+        # num_samples = get_new_ranges_by_angle(&distance_values, 0, theta_swath)
+        # angular_resolution = num_samples / theta_swath
+        # 
+        # for idx in range(num_samples):
+        #   theta = idx / theta_swath
+        #   
+
         while(self.phase_angle < 180):
             # Scan point
             # record
             # rotate
             self.scan_point(self.phase_angle, self.servo.pos)
-            pass
-
+        self.phase_angle = 0
+    
     def scan_point(self, theta, phi):
         '''
         Given angles theta and phi, convert to cartesian coords
