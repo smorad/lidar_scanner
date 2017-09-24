@@ -9,24 +9,21 @@ import logging
 import RPi.GPIO as gpio
 
 # Load .so for correct arch
-if os.uname.machine == 'x86_64':
+if os.uname().machine == 'x86_64':
     import amd64.hokuyoaist as lidar
 else:
     import arm.hokuyoaist as lidar
 
 
-duty_cycle = length / period
-
-
 class Servo:
     PWM_FREQ= 50 # hz
-    PERIOD = self.PWM_FREQ / 60 # 0.02 secs
+    PERIOD = PWM_FREQ / 60 # 0.02 secs
     NEUTRAL = 1.5 # ms
-    DUTY_CYCLE =  self.MIN / self.PERIOD
     MIN = 500 * 10 ** -3 # in ms
     MAX = 2500 * 10 ** -3 # in ms
+    DUTY_CYCLE =  MIN / PERIOD
     STEP = 3 * 10 ** -3 # in ms
-    STEPS_DEG = (self.MAX - self.MIN) / 180
+    STEPS_DEG = (MAX - MIN) / 180
 
     def __init__(self):
         logging.info('Initializing servo...')
@@ -47,7 +44,7 @@ class Servo:
         assert(math.abs(duty_cycle - p.GetDutyCycle < 0.001))
         return p.GetDutyCycle()
 
-    def reset_pos(self): -> None:
+    def reset_pos(self) -> None:
         self.pos = self.NEUTRAL
         self.p.ChangeDutyCycle(self.pos_to_dc(self.pos))
         logging.info('Servo reset to %f deg', self.pos)
@@ -74,11 +71,10 @@ class Servo:
 
 class Lidar:
 
-    DATA_PATH = /etc/data/scans
+    DATA_PATH = '/etc/data/scans'
     # cartesian coordinates
-    scan = {}{}
+    scan = {}
     dev_path = '/dev/ttyACM0'
-    phase_angle = 0
 
     def sys_init(self):
         '''
@@ -87,6 +83,8 @@ class Lidar:
         try:
             sensor = lidar.sensor.open(self.dev_path)
             self.STEP_SIZE_DEG = sensor.step_to_angle()
+        finally:
+            sensor.close()
 
     def __init__(self):
         self.ensure_writable()
@@ -133,14 +131,12 @@ class Lidar:
             theta = idx / (theta_1 - theta_0)
             r = r_values.range(idx)
             x, y, z = self.to_cartesian(theta, phi, r)
+            # We don't want to overwrite any data
+            assert(x not in scan)
             # Save data for writing
-            scan[x][y] = z
+            scan[x] = {y: z}
         
         r_values.clean_up()
-
-    def rotate_deg(deg=self.STEP_SIZE_DEG):
-        # Move infetesimially
-        self.phase_angle += deg
 
     def write(self):
         fname = 'scan-%d' % time.time()
