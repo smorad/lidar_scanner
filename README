@@ -1,0 +1,36 @@
+# 3D Lidar scanner in python using a hoyuko lidar system
+
+The goal of this is to attach a servo to a lidar system, turning a 2d lidar system into a 3d lidar system.
+The driver libraries are a pain in the ass to build, you can rebuild them by roughly following this:
+
+	# Install flexiport https://github.com/gbiggs/flexiport
+
+	mkdir build && cd build
+	cmake ../ -DBUILD_DOCUMENTATION=OFF
+	make
+	# Must make install, cmake config is bad and cannot
+	# point to artifact dir directly
+	make install
+
+	# Build boost from source
+	# Make SURE that the user-config.jam file is copied
+	# to your home directory, and you have specified your
+	# target python version and path in said user-config
+
+	# build boost
+	./bootstrap.sh --with-python
+	./b2 --with-python
+	# at this point you should have produced a shared lib for boost
+
+	# Install the lidar lib https://github.com/gbiggs/hokuyoaist
+	mkdir build && cd build
+	# Make sure you change the path to your boost link path, 
+	# flexiport root path, and target python path
+	LD_LIBRARY_PATH="/home/$USER/boost/boost_1_65_1/stage/lib" CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:/home/$USER/flexiport/" cmake ../ -DBUILD_DOCUMENTATION=OFF -DBOOST_ROOT=~/boost/boost_1_65_1
+	-DPYTHON_EXECUTABLE:FILEPATH=/usr/bin/python3
+	 
+	LD_LIBRARY_PATH="/home/$USER/boost/boost_1_65_1/stage/lib" make
+
+	# Ensure built library is correct binary header type 
+	# (ELF32 ARM EABI5 or ELF64 amd64)
+	file build/python/hoyukoaist.so
