@@ -8,6 +8,12 @@ import logging
 
 import RPi.GPIO as gpio
 
+# Load .so for correct arch
+if os.uname.machine == 'x86_64':
+    import amd64.hokuyoaist as lidar
+else:
+    import arm.hokuyoaist as lidar
+
 
 duty_cycle = length / period
 
@@ -70,13 +76,22 @@ class Lidar:
 
     DATA_PATH = /etc/data/scans
     # cartesian coordinates
-    scan = [][]
+    scan = {}{}
+    dev_path = '/dev/ttyACM0'
     phase_angle = 0
 
+    def sys_init(self):
+        '''
+        Lidar system init
+        '''
+        try:
+            sensor = lidar.sensor.open(self.dev_path)
+            self.STEP_SIZE_DEG = sensor.step_to_angle()
 
     def __init__(self):
         self.ensure_writable()
         self.servo = Servo()
+        self.sys_init()
         self.scan()
 
     def ensure_writable(self):
@@ -91,45 +106,41 @@ class Lidar:
             self.servo.increment_deg()
         self.servo.reset_pos()
 
-    def scan_horizon(self, theta_swath, phi):
+    def to_cartesian(theta: float, phi: float, r: float) -> (float, float, float):
         '''
-        Scans from zero to theta_swath, then saves the resulting data in
+        Convert sphereical to cartesian coords
+        '''
+        x = r * math.sin(theta) * math.cos(phi)
+        y = r * math.sin(theta) * math.sin(phi)
+        z = r * cos(theta)
+        return (x, y, z)
+
+    def scan_horizon(self, theta_0: float, theta_1: float, phi: float):
+        '''
+        Scans from theta_0 to theta_1 in deg, then saves the resulting data in
         cartesian form
         '''
-        # include "sensor.h"
-        # distance_values = new Data()
-        # num_samples = get_new_ranges_by_angle(&distance_values, 0, theta_swath)
-        # angular_resolution = num_samples / theta_swath
-        # 
-        # for idx in range(num_samples):
-        #   theta = idx / theta_swath
-        #   
+        sensor = lidar.Sensor()
+        r_values = lidar.ScanData()
+        try:
+            sensor.open(self.dev_path)
+            num_samples = sensor.get_new_ranges_by_angle(r_values, theta_0, theta_1)
+        finally:
+            sensor.close()
 
-        while(self.phase_angle < 180):
-            # Scan point
-            # record
-            # rotate
-            self.scan_point(self.phase_angle, self.servo.pos)
-        self.phase_angle = 0
-    
-    def scan_point(self, theta, phi):
-        '''
-        Given angles theta and phi, convert to cartesian coords
-        and record distance for said coords
-        '''
-        # record scan[x][y] = z
-        distance = None
-        # distance = get data
-        x = distance * math.sin(theta) * math.cos(phi)
-        y = distance * math.sin(theta) * math.sin(phi)
-        z = distance * cos(theta)
+        for idx in range(num_samples):
+            # Angular resolution per sample
+            theta = idx / (theta_1 - theta_0)
+            r = r_values.range(idx)
+            x, y, z = self.to_cartesian(theta, phi, r)
+            # Save data for writing
+            scan[x][y] = z
+        
+        r_values.clean_up()
 
-        scan[x][y] = z
-
-    def rotate_deg(deg=self.STEP_SIZE):
-        self.phase_angle += deg
+    def rotate_deg(deg=self.STEP_SIZE_DEG):
         # Move infetesimially
-        pass
+        self.phase_angle += deg
 
     def write(self):
         fname = 'scan-%d' % time.time()
