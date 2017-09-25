@@ -52,6 +52,7 @@ class Lidar:
         self.scan_horizon(0)
         #self.servo.increment_deg()
         #self.servo.reset_pos()
+        self.write()
 
     def to_cartesian(self, r: float, theta_deg: float, phi_deg: float) -> (float, float, float):
         '''
@@ -66,7 +67,6 @@ class Lidar:
         x = r * (1 - math.sin(phi)) * math.cos(theta)
         y = r * (1 - math.sin(phi)) * math.sin(theta)
         z = r * (1 - math.cos(phi))
-        logging.debug(r, theta_deg, phi_deg, x, y, z)
         return (x, y, z)
 
     def scan_horizon(self, phi: float):
@@ -107,8 +107,9 @@ class Lidar:
     def write(self):
         fname = 'scan-%d' % time.time()
         fpath = self.DATA_PATH + '/' + fname
-        self.logging.info('Writing scan to %s...', fpath)
-        pickle.dump(fpath, self.scan)
+        logging.info('Writing scan to %s...', fpath)
+        with open(fpath, 'wb') as f:
+            pickle.dump(self.scan_data, f)
 
     def draw_pointmap(self, data):
         import matplotlib
@@ -127,6 +128,6 @@ class Lidar:
         z = [a[2] for a in data]
         # draw our position
         ax.scatter([0], [0], [0], c='b', marker='^')
-        ax.scatter(x, y, z, c='r', marker='o')
+        ax.scatter(x, y, z, c='r', marker='.')
         
         plt.savefig('figure')
