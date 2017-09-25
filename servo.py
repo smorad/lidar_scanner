@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import math
 
 import RPi.GPIO as gpio
 
@@ -20,18 +21,18 @@ class Servo:
         gpio.setmode(gpio.BOARD)
         gpio.setup(12, gpio.OUT)
 
-        self.p = gpio.PWM(12, pwm_freq)
+        self.p = gpio.PWM(12, self.PWM_FREQ)
         self.pos = self.NEUTRAL
         self.p.start(self.pos)
 
-    def increment_deg(deg: float=1) -> float:
+    def increment_deg(self, deg: float=1) -> float:
         '''
         Increment in deg, return current angle
         '''
         self.pos += deg
-        p.ChangeDutyCycle(self.pos_to_dc())
+        self.p.ChangeDutyCycle(self.pos_to_dc())
         logging.info('Servo set to %f deg', self.pos)
-        assert(math.abs(duty_cycle - p.GetDutyCycle < 0.001))
+        assert(abs(duty_cycle - p.GetDutyCycle < 0.001))
         return p.GetDutyCycle()
 
     def reset_pos(self) -> None:
@@ -56,4 +57,4 @@ class Servo:
         '''
         Convert a time in millis to a PWM percentage
         '''
-        return ms * 10 ** 3 / period
+        return ms * 10 ** 3 / self.PERIOD
