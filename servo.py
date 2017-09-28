@@ -2,59 +2,69 @@
 
 import logging
 import math
+import time
 
-import RPi.GPIO as gpio
+#import RPi.GPIO as gpio
+#import RPIO.PWM as pwm
+import pigpio
 
 
 class Servo:
-    PWM_FREQ= 50 # hz
-    PERIOD = PWM_FREQ / 60 # 0.02 secs
-    NEUTRAL = 1.5 # ms
-    MIN = 500 * 10 ** -3 # in ms
-    MAX = 2500 * 10 ** -3 # in ms
-    DUTY_CYCLE =  MIN / PERIOD
-    STEP = 3 * 10 ** -3 # in ms
+    #PWM_FREQ= 50 # hz
+    #PERIOD = PWM_FREQ / 60 # 0.02 secs
+    NEUTRAL = 1500 # 1.5 ms
+    MIN = 500 # 0.5 ms
+    MAX = 2500 # 2.5 ms
     STEPS_DEG = (MAX - MIN) / 180
+    PIN = 18
 
-    def __init__(self):
+    @property
+    def pulse_width(self):
+        return self.p.get_servo_pulsewidth(self.PIN)
+
+    
+    @pulse_width.setter
+    def pulse_width(self, pw: int):
+        self.p.set_servo_pulsewidth(self.PIN, pw)
+
+    def __init__(self, debug=False):
+        if debug:
+                logging.basicConfig(level=logging.DEBUG)
+
         logging.info('Initializing servo...')
-        gpio.setmode(gpio.BOARD)
-        gpio.setup(12, gpio.OUT)
 
-        self.p = gpio.PWM(12, self.PWM_FREQ)
-        self.pos = self.NEUTRAL
-        self.p.start(self.pos)
+        for attr in ['NEUTRAL', 'MIN', 'MAX', 'STEPS_DEG']:
+                logging.DEBUG('{} {}'.format(attr, getattr(self, attr)))
 
-    def increment_deg(self, deg: float=1) -> float:
+        self.p = pigpio.pi()
+        self.p.set_mode(self.PIN, pigpio.OUTPUT) 
+        self.pulse_width = self.NEUTRAL
+        self.p.set_servo_pulsewidth(self.PIN, self.pulse_width)
+
+    def pw_to_deg(self, pw):
         '''
-        Increment in deg, return current angle
+        Converts pulse width to a degree
+        ''' 
+        return (pw - self.MIN) / self.STEPS_DEG
+
+    def increment(self, steps: int=1) -> float:
         '''
-        self.pos += deg
-        self.p.ChangeDutyCycle(self.pos_to_dc())
-        logging.info('Servo set to %f deg', self.pos)
-        assert(abs(duty_cycle - p.GetDutyCycle < 0.001))
-        return p.GetDutyCycle()
+        Increment pulse_width by STEPS_DEG, returns angle (90 deg is neutral)
+        '''
+        self.pulse_width += steps * self.STEPS_DEG
+        logging.debug(
+                'Increased pulse width to {}'.format(self.pulse_width))
+                        
+        degs = self.pw_to_deg(self.pulse_width)
+        logging.info('At {} deg'.format(degs))
+        return degs
 
     def reset_pos(self) -> None:
-        self.pos = self.NEUTRAL
-        self.p.ChangeDutyCycle(self.pos_to_dc(self.pos))
-        logging.info('Servo reset to %f deg', self.pos)
+        self.pulse_width = self.NEUTRAL
+        deg = pw_to_deg(self.pulse_width)
+        logging.info('Servo reset to {} deg', deg)
 
-    def pos_to_dc(self) -> float:
-        '''
-        Returns the current servo position in terms of
-        duty cycle (pct)
-        '''
-        return self.ms_to_pct(self.deg_to_ms(self.pos))
-
-    def deg_to_ms(self, deg: float) -> float:
-        '''
-        Convert a degree number to a PWM phase length
-        '''
-        return deg * self.STEPS_DEG 
-
-    def ms_to_pct(self, ms: float) -> float:
-        '''
-        Convert a time in millis to a PWM percentage
-        '''
-        return ms * 10 ** 3 / self.PERIOD
+    def test(self):
+        for i in range(10):
+                time.sleep(1)
+                self.increment(5)
