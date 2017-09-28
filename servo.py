@@ -4,14 +4,10 @@ import logging
 import math
 import time
 
-#import RPi.GPIO as gpio
-#import RPIO.PWM as pwm
 import pigpio
 
 
 class Servo:
-    #PWM_FREQ= 50 # hz
-    #PERIOD = PWM_FREQ / 60 # 0.02 secs
     NEUTRAL = 1500 # 1.5 ms
     MIN = 500 # 0.5 ms
     MAX = 2500 # 2.5 ms
@@ -58,6 +54,10 @@ class Servo:
         degs = self.pw_to_deg(self.pulse_width)
         logging.info('At {} deg'.format(degs))
         return degs
+
+    @property
+    def phase_angle(self):
+        return self.pw_to_deg(self.pulse_width)
 
     def reset_pos(self) -> None:
         self.pulse_width = self.NEUTRAL

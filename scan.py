@@ -35,7 +35,7 @@ class Lidar:
 
     def __init__(self):
         self.ensure_writable()
-        #self.servo = servo.Servo()
+        self.servo = servo.Servo()
         self.sys_init()
         self.scan()
 
@@ -45,14 +45,16 @@ class Lidar:
         logging.info('Verified scan write permissions')
 
     def scan(self):
-        #while(self.servo.pos < 3.1415):
-        
-        #logging.info('Scanning horizon at phi = %f deg', self.servo.pos)
-        #self.scan_horizon(0, 1, self.servo.pos)
-        self.scan_horizon(0)
-        #self.servo.increment_deg()
-        #self.servo.reset_pos()
+        # we don't need to scan directly up
+        while(self.servo.phase_angle < 0.9 * math.pi:
+                
+                logging.info(
+                    'Scanning horizon at phi = {} rad'.format(self.servo.phase_angle))
+                self.scan_horizon(self.servo.phase_angle)
+                self.servo.increment()
+
         self.write()
+        self.servo.reset_pos()
 
     def to_cartesian(self, r: float, theta_deg: float, phi_deg: float) -> (float, float, float):
         '''
@@ -82,7 +84,6 @@ class Lidar:
         r_values = lidar.ScanData()
         try:
             sensor.open(self.port_opts)
-            # num_samples = sensor.get_new_ranges_by_angle(r_values, theta_0, theta_1)
             num_samples = sensor.get_new_ranges(r_values)
         finally:
             sensor.close()
