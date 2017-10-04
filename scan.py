@@ -34,10 +34,10 @@ class Lidar:
             sensor.close()
 
     def __init__(self):
+        logging.basicConfig(level=logging.DEBUG)
         self.ensure_writable()
         self.servo = servo.Servo()
         self.sys_init()
-        self.scan()
 
     def ensure_writable(self):
         os.makedirs(self.DATA_PATH, exist_ok=True)
@@ -45,15 +45,15 @@ class Lidar:
         logging.info('Verified scan write permissions')
 
     def scan(self):
-        # we don't need to scan directly up
-        while(self.servo.phase_angle < 0.9 * math.pi:
-                
+        # turns out the maximum angle is 89.xxx
+        while(self.servo.phase_angle < 89):
                 logging.info(
-                    'Scanning horizon at phi = {} rad'.format(self.servo.phase_angle))
+                    'Scanning horizon at phi: {:.2f} deg'.format(self.servo.phase_angle))
                 self.scan_horizon(self.servo.phase_angle)
                 self.servo.increment()
 
         self.write()
+        self.draw_pointmap(self.scan_data)
         self.servo.reset_pos()
 
     def to_cartesian(self, r: float, theta_deg: float, phi_deg: float) -> (float, float, float):
@@ -63,12 +63,10 @@ class Lidar:
         theta, phi = map(math.radians, [theta_deg, phi_deg])
         # xy plane is the floor
         # z plane going up
-        # phi is normally the angle from the Z-axis to vector r
-        # in this case, it's easier to have it be the angle from the XY plane
-        # to vector r, hence the 1 - phi
-        x = r * (1 - math.sin(phi)) * math.cos(theta)
-        y = r * (1 - math.sin(phi)) * math.sin(theta)
-        z = r * (1 - math.cos(phi))
+        # phi is the angle from the Z-axis to vector r
+        x = r * math.sin(phi) * math.cos(theta)
+        y = r * math.sin(phi) * math.sin(theta)
+        z = r * math.cos(phi)
         return (x, y, z)
 
     def scan_horizon(self, phi: float):
@@ -94,7 +92,8 @@ class Lidar:
             r = r_values.range(idx)
             # r less than 20mm means the sample is bad
             if r <= 20:
-                logging.info('Got bad value')
+                logging.info(
+                    'Got bad r at theta: {:.2f} phi: {:.2f}'.format(theta, phi))
                 continue
             x, y, z = self.to_cartesian(r, theta, phi)
             # We don't want to overwrite any data

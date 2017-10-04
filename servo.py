@@ -3,8 +3,19 @@
 import logging
 import math
 import time
-
+import subprocess
+from contextlib import contextmanager
 import pigpio
+
+
+class Pigpiod:
+
+    def __enter__(self):
+        self.pigpio_server = subprocess.Popen('/usr/local/bin/pigpiod')
+        return self.pigpio_server
+
+    def __exit__(self, *args):
+        self.pigpio_server.terminate()
 
 
 class Servo:
@@ -30,7 +41,10 @@ class Servo:
         logging.info('Initializing servo...')
 
         for attr in ['NEUTRAL', 'MIN', 'MAX', 'STEPS_DEG']:
-                logging.DEBUG('{} {}'.format(attr, getattr(self, attr)))
+                try:
+                    logging.DEBUG('{} {}'.format(attr, getattr(self, attr)))
+                except:
+                    pass
 
         self.p = pigpio.pi()
         self.p.set_mode(self.PIN, pigpio.OUTPUT) 
@@ -40,8 +54,11 @@ class Servo:
     def pw_to_deg(self, pw):
         '''
         Converts pulse width to a degree
+
+        By default, 180 deg is parallel to the ground and 90 deg is straight up.
+        Subtract 90 so our spherical to cartesian conversion is easier later.
         ''' 
-        return (pw - self.MIN) / self.STEPS_DEG
+        return (pw - self.MIN) / self.STEPS_DEG - 90
 
     def increment(self, steps: int=1) -> float:
         '''
@@ -52,7 +69,7 @@ class Servo:
                 'Increased pulse width to {}'.format(self.pulse_width))
                         
         degs = self.pw_to_deg(self.pulse_width)
-        logging.info('At {} deg'.format(degs))
+        logging.info('At {:.2f} deg from +Z axis'.format(degs))
         return degs
 
     @property
@@ -61,8 +78,8 @@ class Servo:
 
     def reset_pos(self) -> None:
         self.pulse_width = self.NEUTRAL
-        deg = pw_to_deg(self.pulse_width)
-        logging.info('Servo reset to {} deg', deg)
+        deg = self.pw_to_deg(self.pulse_width)
+        logging.info('Servo reset to {:.2f} deg from +Z axis'.format(deg))
 
     def test(self):
         for i in range(10):
