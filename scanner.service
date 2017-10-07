@@ -1,0 +1,8 @@
+[Unit]
+Description=3D lidar scanner
+
+[Service]
+ExecStart=/home/users/pi/lidar_scanner/run.py
+
+[Install]
+WantedBy=multi-user.target
