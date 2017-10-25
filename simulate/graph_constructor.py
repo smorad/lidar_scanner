@@ -1,6 +1,12 @@
+#!/usr/bin/env python3
+
 import plyfile
 import networkx as nx
 import itertools
+
+# TODO fix disgusting code
+
+
 
 class Node:
     registry = []
@@ -15,8 +21,11 @@ class Node:
     def __repr__(self):
         return 'Node {}:({:.01f}, {:.01f}, {:.01f})'.format(self.ID, self.x, self.y, self.z)
 
-def main():
-    p = plyfile.PlyData.read('../meshes/mesh1.ply')
+def generate_graph(path: str):
+    '''
+    Generate a graph data structure from a mesh polygon file
+    '''
+    p = plyfile.PlyData.read(path)
     # format is x, y, z, nx, ny, nz
     nodes = [Node(index, vertex) for index, vertex in enumerate(p['vertex'])]
     # convert faces to edges
@@ -31,12 +40,7 @@ def main():
     edges = associate_edges(edges)
     G.add_edges_from(edges)
 
-    # Filter non maxima, use lambda instead of bool because 0 could potentially be a max
-    maxima = filter(lambda x: x != None, [find_local_maximum(G, node) for node in G.nodes])
-    for maximum in maxima:
-        print(maximum) 
-    #print(len(G.nodes), len(maxima), len(maxima) / len(G.nodes)) 
-    
+    return G
 
 # Associate edge with Node object instead of just index
 def associate_edges(edges):
@@ -53,13 +57,5 @@ def face_to_edge(face):
     # undirected graph, so use replacement
     return list(itertools.permutations([a, b, c], 2))
 
-# naive
-def find_local_maximum(graph, node):
-    heights = [neighbor.z for neighbor in graph.neighbors(node)]
-    is_maximum = all([node.z >= height for height in heights])
-    if is_maximum:
-        return node
-    return None
-
 if __name__ == '__main__':
-    main()
+    generate_graph('../meshes/mesh1.ply')
