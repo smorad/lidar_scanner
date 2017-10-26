@@ -50,14 +50,12 @@ class Maxima(HandHoldGraph):
         new_g.add_nodes_from(maxima)
         # itertools does something weird here where it empties maxima, so deepcopy
         all_possible_edges = list(itertools.permutations(maxima, 2))
-        print('edges', list(all_possible_edges)[:3])
-        print('nodes', list(new_g.nodes)[:3])
+        #print('edges', list(all_possible_edges)[:3])
+        #print('nodes', list(new_g.nodes)[:3])
         [new_g.add_edge(*edge, weight=euclidean_distance(*edge)) 
             for edge in all_possible_edges]
-        for a, b in all_possible_edges:
-            print ('{}->{}'.format(a.ID, b.ID))
         #new_g.add_weighted_edges_from(all_possible_edges)
-        print('all edges and nodes', len(list(new_g.edges)), len(list(new_g.nodes)))
+        #print('all edges and nodes', len(list(new_g.edges)), len(list(new_g.nodes)))
         return nx.minimum_spanning_tree(new_g)
 
 
