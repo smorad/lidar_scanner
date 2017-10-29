@@ -23,9 +23,24 @@ class HandHoldGraph:
 
     def get_graph(self):
         '''
-        Return a graph of handholds
+        Return a graph of potential climbing holds
         '''
         raise NotImplementedError()
+
+    def get_path(self, start_node=None, goal_node=None):
+        '''
+        Return a path of nodes
+        '''
+        if not (start_node or goal_node):
+            for node in self.new_g.nodes:
+                if not goal_node:
+                    goal_node = node
+                    start_node = node
+                if node.x > goal_node.x and node.y > goal_node.y:
+                    goal_node = node
+                if node.x < start_node.x and node.y < start_node.y:
+                    start_node = node
+        return nx.shortest_path(self.new_g, start_node, goal_node)
 
 class Maxima(HandHoldGraph):
 
@@ -50,12 +65,9 @@ class Maxima(HandHoldGraph):
         new_g.add_nodes_from(maxima)
         # itertools does something weird here where it empties maxima, so deepcopy
         all_possible_edges = list(itertools.permutations(maxima, 2))
-        #print('edges', list(all_possible_edges)[:3])
-        #print('nodes', list(new_g.nodes)[:3])
         [new_g.add_edge(*edge, weight=euclidean_distance(*edge)) 
             for edge in all_possible_edges]
-        #new_g.add_weighted_edges_from(all_possible_edges)
-        #print('all edges and nodes', len(list(new_g.edges)), len(list(new_g.nodes)))
-        return nx.minimum_spanning_tree(new_g)
+        self.new_g = nx.minimum_spanning_tree(new_g)
+        return self.new_g
 
 
