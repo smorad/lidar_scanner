@@ -1,7 +1,12 @@
-# 3D Lidar scanner in python using a hoyuko lidar system
+# 3D Lidar scanner and path planner in python using a hoyuko rangefinder 
+# Path Planning:
+Has multiple ways to chart a course on a surface
 
-The goal of this is to attach a servo to a lidar system, turning a 2d lidar system into a 3d lidar system.
-The driver libraries are a pain in the ass to build, you can rebuild them by roughly following this:
+# Lidar:
+Attach a Z-axis servo to a rangefinder, turning a 2d rangefinder into a 3d lidar system. Contains code to format results into an .xyz point cloud file.
+The driver libraries are a pain in the ass to build, you shouldn't try to rebuild them. I've already built them and bundled them in the lib directory.
+
+If you're crazy and want to rebuild them, the following is a rough guide:
 
 	# Install flexiport https://github.com/gbiggs/flexiport
 
