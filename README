@@ -4,7 +4,7 @@ Has multiple ways to chart a course on a surface
 
 # Lidar:
 Attach a Z-axis servo to a rangefinder, turning a 2d rangefinder into a 3d lidar system. Contains code to format results into an .xyz point cloud file.
-The driver libraries are a pain in the ass to build, you shouldn't try to rebuild them. I've already built them and bundled them in the lib directory.
+The driver libraries are a pain in the ass to build, you shouldn't try to rebuild them. I've already built them and bundled them in the arm and amd64 directories.
 
 If you're crazy and want to rebuild them, the following is a rough guide:
 
