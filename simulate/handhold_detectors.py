@@ -18,7 +18,14 @@ def find_local_maximum(graph, node):
         return node
     return None
 
-def assign_flatness(graph, node):
+def euclidean_neighbors(graph, node, distance):
+    '''
+    Return an ego graph of a node. In other words
+    return the all nodes within given distance of the given node
+    '''
+    return nx.ego_graph(graph, node, distance, center=False, distance=weight)
+
+def assign_flatness(graph, node, distance=10):
     '''
     Given a node, assigns it a score denoting how flat the immediate
     area around the node is. The lower the score, the flatter it is, with
@@ -28,6 +35,7 @@ def assign_flatness(graph, node):
     # Generate normal of surface, align normal with Z axis
     #https://stackoverflow.com/questions/1023948/rotate-normal-vector-onto-axis-plane
     #https://math.stackexchange.com/questions/17246/is-there-a-way-to-rotate-the-graph-of-a-function
+    #neighbors = euclidean_neighbors(graph, node, distance)
     X = [(n.x, n.y) for n in graph.neighbors(node)]
     t = [n.z for n in graph.neighbors(node)]
     regression = linear_model.LinearRegression()
@@ -63,7 +71,7 @@ class HandHoldGraph:
         '''
         raise NotImplementedError()
 
-    def _build_emst(self, nodes):
+    def _build_emst(self, nodes, loss_weight=0):
         '''
         Given a list of nodes, builds as complete euclidean graph.
         Returns the euclidean minimum spanning tree of the graph.
@@ -72,7 +80,7 @@ class HandHoldGraph:
         g.add_nodes_from(nodes)
         # itertools does something weird here where it empties nodes, so deepcopy
         all_possible_edges = list(itertools.permutations(nodes, 2))
-        [g.add_edge(*edge, weight=euclidean_distance(*edge)) 
+        [g.add_edge(*edge, weight=euclidean_distance(*edge) + loss_weight * edge[1].loss ) 
             for edge in all_possible_edges]
         self.g = nx.minimum_spanning_tree(g)
 
@@ -103,7 +111,7 @@ class Planar(HandHoldGraph):
         node_losses = sorted(self._g.nodes, key=lambda x: x.loss)
         divider = int(percentile / 100 * len(node_losses))
         nodes = node_losses[:divider + 1]
-        self._build_emst(nodes)
+        self._build_emst(nodes, 0.1)
         return self.g
 
 
