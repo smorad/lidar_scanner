@@ -3,7 +3,9 @@ import graph_constructor
 import handhold_detectors
 
 def main():
+    print('Generating graph...')
     g = graph_constructor.generate_graph('../data/mesh1.ply')
+    print('Searching for handholds...')
     #h = handhold_detectors.Maxima(g)
     h = handhold_detectors.Planar(g)
 

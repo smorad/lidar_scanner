@@ -20,12 +20,14 @@ def find_local_maximum(graph, node):
 
 def euclidean_neighbors(graph, node, distance):
     '''
-    Return an ego graph of a node. In other words
+    Return all nodes that form an ego graph of a node. In other words
     return the all nodes within given distance of the given node
     '''
-    return nx.ego_graph(graph, node, distance, center=False, distance=weight)
+    g = nx.ego_graph(graph, node, distance, center=False, distance='weight')
+    #print('Neighbors of size {}'.format(g.number_of_nodes()))
+    return g.nodes
 
-def assign_flatness(graph, node, distance=10):
+def assign_flatness(graph, node, distance=3):
     '''
     Given a node, assigns it a score denoting how flat the immediate
     area around the node is. The lower the score, the flatter it is, with
@@ -35,9 +37,12 @@ def assign_flatness(graph, node, distance=10):
     # Generate normal of surface, align normal with Z axis
     #https://stackoverflow.com/questions/1023948/rotate-normal-vector-onto-axis-plane
     #https://math.stackexchange.com/questions/17246/is-there-a-way-to-rotate-the-graph-of-a-function
-    #neighbors = euclidean_neighbors(graph, node, distance)
-    X = [(n.x, n.y) for n in graph.neighbors(node)]
-    t = [n.z for n in graph.neighbors(node)]
+    neighbors = euclidean_neighbors(graph, node, distance)
+    X = [(n.x, n.y) for n in neighbors]
+    t = [n.z for n in neighbors]
+    
+    #X = [(n.x, n.y) for n in graph.neighbors(node)]
+    #t = [n.z for n in graph.neighbors(node)]
     regression = linear_model.LinearRegression()
     model = regression.fit(X, t)
     #print('coef', regression.coef_)
@@ -107,7 +112,17 @@ class Planar(HandHoldGraph):
         '''Get emst with the flattest surfaces'''
         assert(percentile > 0 and percentile < 100)
 
-        [assign_flatness(self._g, node)for node in self._g.nodes]
+        print('Computing flatness for {} nodes...'.format(self._g.number_of_nodes()))
+        count = 0
+        for node in self._g.nodes:
+            assign_flatness(self._g, node)
+            count += 1
+            if not count % 100:
+                print(
+                    'Computed flatness for {} / {} nodes'
+                    .format(count, self._g.number_of_nodes()))
+
+        [assign_flatness(self._g, node) for node in self._g.nodes]
         node_losses = sorted(self._g.nodes, key=lambda x: x.loss)
         divider = int(percentile / 100 * len(node_losses))
         nodes = node_losses[:divider + 1]
