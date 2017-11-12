@@ -6,11 +6,15 @@ from sklearn import linear_model, model_selection
 import multiprocessing
 
 def euclidean_distance(a, b):
-    return math.sqrt(
-        (a.x - b.x) ** 2 +
-        (a.y - b.y) ** 2 + 
-        (a.z - b.z) ** 2
-    )
+    try:
+        return math.sqrt(
+            (a.x - b.x) ** 2 +
+            (a.y - b.y) ** 2 + 
+            (a.z - b.z) ** 2
+        )
+    except:
+        print(a)
+        print(b)
 
 def find_local_maximum(graph, node):
     heights = [neighbor.z for neighbor in graph.neighbors(node)]
@@ -84,12 +88,18 @@ class HandHoldGraph:
         Given a list of nodes, builds as complete euclidean graph.
         Returns the euclidean minimum spanning tree of the graph.
         '''
-        g = nx.Graph()
+        g = nx.DiGraph()
         g.add_nodes_from(nodes)
         # itertools does something weird here where it empties nodes, so deepcopy
+        # edges must be bidirectional, as weight from a good node to bad node
+        # should be different than a bad node to good node
         all_possible_edges = list(itertools.permutations(nodes, 2))
-        [g.add_edge(*edge, weight=euclidean_distance(*edge) + loss_weight * edge[1].loss ) 
-            for edge in all_possible_edges]
+        for edge in all_possible_edges:
+            edge_weight = euclidean_distance(*edge) + edge[1].loss * loss_weight
+            g.add_edge(*edge, weight=edge_weight)
+            
+        #[g.add_edge(*edge, weight=euclidean_distance(*edge) + loss_weight * edge[1].loss ) 
+        #    for edge in all_possible_edges]
         self.g = nx.minimum_spanning_tree(g)
 
 
@@ -118,24 +128,17 @@ class Planar(HandHoldGraph):
         print('Computing flatness for {} nodes...'.format(self._g.number_of_nodes()))
         # sklearn is super duper slow to generate linear models
         p = multiprocessing.Pool(32)
-        flatless_losses = p.starmap(
+        flatness_losses = p.starmap(
                 compute_flatness, [(self._g, node) for node in self._g.nodes])
         # I hope the node iterator is ordered...
-        node_losses = sorted(zip(flatless_losses, self._g.nodes))
-#        count = 0
-#        for node in self._g.nodes:
-#            assign_flatness(self._g, node)
-#            count += 1
-#            if not count % 100:
-#                print(
-#                    'Computed flatness for {} / {} nodes'
-#                    .format(count, self._g.number_of_nodes()))
-#
-#        [assign_flatness(self._g, node) for node in self._g.nodes]
-#        node_losses = sorted(self._g.nodes, key=lambda x: x.loss)
-        divider = int(percentile / 100 * len(node_losses))
-        nodes = node_losses[:divider + 1]
-        self._build_emst(nodes, 0.1)
+        for idx, node in enumerate(self._g.nodes):
+            node.loss = flatness_losses[idx]
+        #node_losses = sorted(zip(flatless_losses, self._g.nodes), key=lambda x: x[0])
+        loss_sorted_nodes = sorted(self._g.nodes, key=lambda x: x.loss)
+        divider = int(percentile / 100 * len(loss_sorted_nodes))
+        best_nodes = loss_sorted_nodes[:divider + 1]
+        #weights_and_nodes = node_losses[:divider + 1]
+        self._build_emst(best_nodes, 0.1)
         return self.g
 
 
