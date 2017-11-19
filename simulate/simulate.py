@@ -6,6 +6,10 @@ import handhold_detectors
 import os
 import itertools
 import pickle
+import math
+
+from compute_path import bounded_leg_astar
+from graph_utils import compute_cost
 
 TEST = os.getenv('TEST')
 
@@ -48,11 +52,19 @@ def main():
         for p in h.get_path(*start, *end):
             f.write('{} {} {}\n'.format(int(p.x), int(p.y), int(p.z)))
 
-def get_node(g, id):
-    for node in g:
-        if node.ID == id:
-            print('found node ', node)
-            return node
+def get_node(h, pos):
+    '''Given node coords in h, return corresponding node in h.
+    This is due to network not allowing the overloading of
+    the __eq__ method for nodes
+    '''
+
+    for n in h:
+        if math.isclose(n.x, pos[0], rel_tol=0.01) and \
+                math.isclose(n.y, pos[1], rel_tol=0.01) and \
+                math.isclose(n.z, pos[2], rel_tol = 0.01):
+            return n
+
+    print('Warning, node ', id, ' not in h')
 
 
 class Bot:
@@ -60,6 +72,7 @@ class Bot:
 
     def __init__(self, id, start, tether_distance=500):
         self.id = id
+        self.node = start
         self.tether_distance = tether_distance
 
 
@@ -77,41 +90,50 @@ def write_handholds(g=None):
     with open('../data/handhold.pickle', 'wb+') as f:
         pickle.dump(h, f)
 
-    ## Generate XYZ file for pics
-    with open('../data/handholds.xyz', 'w') as f:
-        for n in h1.nodes:
-            f.write('{} {} {}\n'.format(int(n.x), int(n.y), int(n.z)))
-
-
 def multi_bot(bots=4, cache=True):
     print('Loading graph...')
     g = nx.read_gpickle('../data/graph.gpickle')
     print('Loading handholds...')
-    h = nx.read_gpickle('../data/handhold.pickle')
+    with open('../data/handhold.pickle', 'rb') as f:
+        h = pickle.load(f)
 
-    START_NODE_IDS = [
-        2164,
-        2708,
-        653,
-        649
+    ## Generate XYZ file for pics
+    with open('../data/handholds.xyz', 'w') as f:
+        for n in h.g.nodes:
+            f.write('{} {} {}\n'.format(n.x, n.y, n.z))
+
+    START_NODE_POS = [
+        (417.507, -744.396, -33.9633),
+        (433.345, -738.355, -33.6464),
+        (423.88, -759.175, -33.5664),
+        (440.459, -752.136, -35.0659),
     ]
 
-    END_NODE_ID = 111
 
-    start_nodes = [get_node(g, id) for id in START_NODE_IDS]
-    end_node = get_node(g, END_NODE_ID)
-    assert(len(start_nodes) == 4)
+    END_NODE_POS = (-35.7883, 1210.73, 328.319)
+
+    start_nodes = [get_node(h.g, pos) for pos in START_NODE_POS]
+    end_node = get_node(h.g, END_NODE_POS)
+    assert(any(start_nodes))
 
     bots = [Bot(i, node, 500) for i, node in enumerate(start_nodes)] 
-    for bot in bots:
-        path_nodes = h.get_path(bot.node, end)
-        print('{}: {} -> {}'.format(bot.id, bot.node, path_nodes[0]))
-        path_nodes[0].occupied = bot
-        bot.node.occupied = False
-        bot.node = path_nodes[0]
-        if bot.node == end_node:
-            print('{} reached end node')
-            print('final pos: ', [bot.node for bot in bots])
+    while True:
+        for bot in bots:
+            #path_nodes = h.get_path(bot.node, end_node)
+            path_nodes = bounded_leg_astar(
+                h.g, 
+                bot.node, 
+                end_node, 
+                heuristic=compute_cost
+            )
+            print('{}: {} -> {}'.format(bot.id, bot.node, path_nodes[1]))
+            path_nodes[1].occupied = bot
+            bot.node.occupied = False
+            bot.node = path_nodes[1]
+            if bot.node == end_node:
+                print('{} reached end node'.format(bot))
+                print('final pos: ', [bot.node for bot in bots])
+                break
             
 
 if __name__ == '__main__':
