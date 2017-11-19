@@ -16,6 +16,7 @@ class Node:
         self.y = args[1]
         self.z = args[2]
         self.loss = None
+        self.occupied = None
     
         Node.registry.append(self)
 

@@ -6,7 +6,7 @@ import networkx as nx
 from graph_utils import euclidean_distance
 
 
-def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_dist=500):
+def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_dist=500, bot_nodes=[]):
     # stolen and modified from networkx library
     if G.is_multigraph():
         raise NetworkXError("astar_path() not implemented for Multi(Di)Graphs")
@@ -58,6 +58,12 @@ def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_
             # we want bound to be distance only (no risk)
             if euclidean_distance(curnode, neighbor) > bound_dist:
                 continue
+            # node is already occupied by another bot
+            if neighbor.occupied:
+                continue
+            for bot_node in bot_nodes: 
+                if euclidean_distance(neighbor, bot_node) > bot_node.tether_distance:
+                    continue
             # cost should also include risk
             ncost = dist + w.get(weight, 1) 
             if neighbor in enqueued:

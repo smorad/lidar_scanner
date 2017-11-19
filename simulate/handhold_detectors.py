@@ -135,6 +135,7 @@ class HandHoldGraph:
                     goal_node = node
                 if node.y < goal_node.y:
                     start_node = node
+        # Can't pickle lambdas
         return bounded_leg_astar(
             self.g, start_node, goal_node, 
             # Weight is a tuple of (distance, risk)
