@@ -3,8 +3,10 @@ from itertools import count
 from networkx import NetworkXError
 import networkx as nx
 
+from graph_utils import euclidean_distance
 
-def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_dist=100):
+
+def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_dist=250):
     # stolen and modified from networkx library
     if G.is_multigraph():
         raise NetworkXError("astar_path() not implemented for Multi(Di)Graphs")
@@ -51,11 +53,15 @@ def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_
         explored[curnode] = parent
 
         for neighbor, w in G[curnode].items():
-            # heuristic should ALWAYS be euclidean distance
-            if neighbor in explored or \
-                heuristic(curnode, neighbor) > bound_dist:
+            # heuristic should also include risk
+            # but we want bound to be distance only (no risk)
+            if neighbor in explored: 
                 continue
-            ncost = dist + w.get(weight, 1)
+            if euclidean_distance(curnode, neighbor) > bound_dist:
+                print(euclidean_distance(curnode, neighbor),'>', bound_dist)
+                continue
+            # Weight[0] is phys distance while [1] is loss
+            ncost = dist + w.get(weight[0], 1)
             if neighbor in enqueued:
                 qcost, h = enqueued[neighbor]
                 # if qcost < ncost, a longer path to neighbor remains

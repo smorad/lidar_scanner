@@ -9,6 +9,7 @@ import sys
 
 from compute_path import bounded_leg_astar
 import phase_timer
+from graph_utils import euclidean_distance
 
 def euclidean_distance(a, b):
     return math.sqrt(
@@ -127,16 +128,16 @@ class HandHoldGraph:
             # should be different than a bad node to good node
             all_possible_edges = list(itertools.permutations(nodes, 2))
             #edges = self.guess_edges(nodes)
-            # three-ple of node, node, weight
+            # three-ple of node, node, weight(dist, risk)
             ebunch = [
-                (edge[0], edge[1], euclidean_distance(*edge) + edge[1].loss * loss_weight)
+                (edge[0], edge[1], (euclidean_distance(*edge), edge[1].loss))
                 for edge in all_possible_edges
             ]
             g.add_weighted_edges_from(ebunch)
             self.g = g
             
 
-    def get_path(self, start_node=None, goal_node=None):
+    def get_path(self, start_node=None, goal_node=None, risk_weight=0.1):
         '''
         Return a path of nodes
         '''
@@ -151,13 +152,15 @@ class HandHoldGraph:
                     start_node = node
         return bounded_leg_astar(
             self.g, start_node, goal_node, 
-            lambda x, y: euclidean_distance(x, y)
+            # Weight is a tuple of (distance, risk)
+            # Bounded leg will take a bound for max leg length
+            lambda x, y: euclidean_distance(x, y) + y.loss * risk_weight
         )
 
 class Planar(HandHoldGraph):
     '''For microspine grippers. Search for a flat, planar surface.'''
 
-    def get_graph(self, percentile=20):
+    def get_graph(self, percentile=15):
         '''Get emst with the flattest surfaces'''
         assert(percentile > 0 and percentile < 100)
 
