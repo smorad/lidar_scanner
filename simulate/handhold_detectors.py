@@ -9,14 +9,8 @@ import sys
 
 from compute_path import bounded_leg_astar
 import phase_timer
-from graph_utils import euclidean_distance
+from graph_utils import euclidean_distance, compute_cost
 
-def euclidean_distance(a, b):
-    return math.sqrt(
-        (a.x - b.x) ** 2 +
-        (a.y - b.y) ** 2 + 
-        (a.z - b.z) ** 2
-    )
 
 def find_local_maximum(graph, node):
     heights = [neighbor.z for neighbor in graph.neighbors(node)]
@@ -31,7 +25,6 @@ def euclidean_neighbors(graph, node, distance):
     return the all nodes within given distance of the given node
     '''
     g = nx.ego_graph(graph, node, distance, center=False, distance='weight')
-    #print('Neighbors of size {}'.format(g.number_of_nodes()))
     return g.nodes
 
 
@@ -54,7 +47,6 @@ def compute_flatness(graph, node, distance=10):
     # a planar surface (linear surface)
     # z deriv is just d/dx(f(x)) + d/dy(f(y))
     model_gradient = (regression.coef_[0], regression.coef_[1], regression.coef_[0] + regression.coef_[1])
-    #print('model grad', model_gradient)
 
     node_surface = [(n.x, n.y, n.z) for n in graph.neighbors(node)]
     # Get the point gradient at each point in the surface
@@ -93,8 +85,7 @@ class HandHoldGraph:
         # should be different than a bad node to good node
         all_possible_edges = list(itertools.permutations(nodes, 2))
         for edge in all_possible_edges:
-            edge_weight = euclidean_distance(*edge) + edge[1].loss * loss_weight
-            g.add_edge(*edge, weight=edge_weight)
+            g.add_edge(*edge, weight=compute_cost(*edge))
             
         self.g = nx.minimum_spanning_tree(g)
 
@@ -105,15 +96,13 @@ class HandHoldGraph:
         is connected to every other node), but the minimum spanning aborescence
         causes tons of page faults and thrashes my disk. 
         '''
-        print('Guessing edges...')
-        with phase_timer.Timer():
-            edges = []
-            for node in nodes:
-                closest_nodes = sorted(nodes, key=lambda x: euclidean_distance(node, x))[:neighbor_len]
-                edges += [(node, neighbor) for neighbor in closest_nodes]
+        edges = []
+        for node in nodes:
+            closest_nodes = sorted(nodes, key=lambda x: euclidean_distance(node, x))[:neighbor_len]
+            edges += [(node, neighbor) for neighbor in closest_nodes]
         return edges
 
-    def build_edges(self, nodes, loss_weight=0):
+    def build_edges(self, nodes, risk_weight=1):
         '''
         Given a list of nodes, builds as complete euclidean graph.
         Returns the aborescence (directed analog of euclidean minimum 
@@ -123,15 +112,11 @@ class HandHoldGraph:
         with phase_timer.Timer():
             g = nx.DiGraph()
             g.add_nodes_from(nodes)
-            # itertools does something weird here where it empties nodes, so deepcopy
-            # edges must be bidirectional, as weight from a good node to bad node
-            # should be different than a bad node to good node
-            all_possible_edges = list(itertools.permutations(nodes, 2))
-            #edges = self.guess_edges(nodes)
-            # three-ple of node, node, weight(dist, risk)
+            edges = self.guess_edges(nodes)
+            # three-ple of node, node, weight
             ebunch = [
-                (edge[0], edge[1], (euclidean_distance(*edge), edge[1].loss))
-                for edge in all_possible_edges
+                (edge[0], edge[1], compute_cost(*edge))
+                for edge in edges
             ]
             g.add_weighted_edges_from(ebunch)
             self.g = g
@@ -154,7 +139,8 @@ class HandHoldGraph:
             self.g, start_node, goal_node, 
             # Weight is a tuple of (distance, risk)
             # Bounded leg will take a bound for max leg length
-            lambda x, y: euclidean_distance(x, y) + y.loss * risk_weight
+            # lambda x, y: euclidean_distance(x, y) + y.loss * risk_weight
+            compute_cost
         )
 
 class Planar(HandHoldGraph):
@@ -172,9 +158,9 @@ class Planar(HandHoldGraph):
             flatness_losses = p.starmap(
                     compute_flatness, [(self._g, node) for node in self._g.nodes])
             # I hope the node iterator is ordered...
+            # For decimated example, flatness losses vary between 25 and 3000
             for idx, node in enumerate(self._g.nodes):
                 node.loss = flatness_losses[idx]
-            #node_losses = sorted(zip(flatless_losses, self._g.nodes), key=lambda x: x[0])
             loss_sorted_nodes = sorted(self._g.nodes, key=lambda x: x.loss)
             divider = int(percentile / 100 * len(loss_sorted_nodes))
             best_nodes = loss_sorted_nodes[:divider + 1]
