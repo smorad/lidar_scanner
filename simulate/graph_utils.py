@@ -1,5 +1,7 @@
 import math
 
+RISK_WEIGHT = 0.25
+
 def euclidean_distance(a, b):
     return math.sqrt(
         (a.x - b.x) ** 2 +
@@ -7,7 +9,7 @@ def euclidean_distance(a, b):
         (a.z - b.z) ** 2
     )
 
-def compute_cost(a, b, risk_weight=1):
+def compute_cost(a, b):
     '''Compute cost (distance and risk)'''
-    return euclidean_distance(a, b) + risk_weight * b.loss
+    return euclidean_distance(a, b) + RISK_WEIGHT * b.loss
 

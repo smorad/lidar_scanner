@@ -6,7 +6,7 @@ import networkx as nx
 from graph_utils import euclidean_distance
 
 
-def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_dist=250):
+def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_dist=500):
     # stolen and modified from networkx library
     if G.is_multigraph():
         raise NetworkXError("astar_path() not implemented for Multi(Di)Graphs")
