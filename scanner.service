@@ -1,3 +1,6 @@
+# Since I will be using my scanner at the gym, where I'm unable to SSH in or 
+# communicate in any way, it makes sense to just crete a scanner service
+# and run it on boot
 [Unit]
 Description=3D lidar scanner
 

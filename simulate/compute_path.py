@@ -6,8 +6,20 @@ import networkx as nx
 from graph_utils import euclidean_distance
 
 
-def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_dist=500, bot_nodes=[]):
+def bounded_leg_astar(G,
+                      source,
+                      target,
+                      heuristic=None,
+                      weight='weight',
+                      bound_dist=300,
+                      bot_nodes=[]):
     # stolen and modified from networkx library
+    '''
+    Given a graph, source, and sink compute a path from the source to sink. 
+    The leg distance (not edge weight) is bounded as our hopping robot does not
+    have unlimited hop distance. This function will also skip nodes occupied
+    by other robots.
+    '''
     if G.is_multigraph():
         raise NetworkXError("astar_path() not implemented for Multi(Di)Graphs")
 
@@ -53,19 +65,22 @@ def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_
         explored[curnode] = parent
 
         for neighbor, w in G[curnode].items():
-            if neighbor in explored: 
+            if neighbor in explored:
                 continue
-            # we want bound to be distance only (no risk)
-            if euclidean_distance(curnode, neighbor) > bound_dist:
+            # we want bound to be distance only (no risk/weight)
+            #if euclidean_distance(curnode, neighbor) > bound_dist:
+            # ensure only one edge from a to b
+            if w['dist'] > bound_dist:
                 continue
             # node is already occupied by another bot
             if neighbor.occupied:
                 continue
-            for bot_node in bot_nodes: 
-                if euclidean_distance(neighbor, bot_node) > bot_node.tether_distance:
+            for bot_node in bot_nodes:
+                if euclidean_distance(neighbor,
+                                      bot_node) > bot_node.tether_distance:
                     continue
             # cost should also include risk
-            ncost = dist + w.get(weight, 1) 
+            ncost = dist + w.get(weight, 1)
             if neighbor in enqueued:
                 qcost, h = enqueued[neighbor]
                 # if qcost < ncost, a longer path to neighbor remains
@@ -80,8 +95,3 @@ def bounded_leg_astar(G, source, target, heuristic=None, weight='weight', bound_
             push(queue, (ncost + h, next(c), neighbor, ncost, curnode))
 
     raise nx.NetworkXNoPath("Node %s not reachable from %s" % (source, target))
-
-
-
-
-

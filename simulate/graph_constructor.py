@@ -4,24 +4,31 @@ import plyfile
 import networkx as nx
 import itertools
 
+from graph_utils import euclidean_distance
+
 # TODO fix disgusting code
 
 
-
 class Node:
+    # Registry is used for edge assignment
     registry = []
+
     def __init__(self, ID, args):
         self.ID = ID
         self.x = args[0]
         self.y = args[1]
         self.z = args[2]
+        # How good of a hold this node is
         self.loss = None
+        # Is a robot on me?
         self.occupied = None
-    
+
         Node.registry.append(self)
 
     def __repr__(self):
-        return 'Node {}:({:.01f}, {:.01f}, {:.01f})'.format(self.ID, self.x, self.y, self.z)
+        return 'Node {}:({:.01f}, {:.01f}, {:.01f})'.format(
+            self.ID, self.x, self.y, self.z)
+
 
 def generate_graph(path: str):
     '''
@@ -41,8 +48,13 @@ def generate_graph(path: str):
     G.add_nodes_from(nodes)
     edges = associate_edges(edges)
     G.add_edges_from(edges)
+    # prepopulate edge distance
+    for a, b in G.edges:
+        G[a][b]['dist'] = euclidean_distance(a, b)
+    #nx.set_edge_attributes(G, 'dist', edge_dists)
 
     return G
+
 
 # Associate edge with Node object instead of just index
 def associate_edges(edges):
@@ -53,11 +65,14 @@ def associate_edges(edges):
 
     return edge_objs
 
+
 # collapse a face (3 tuple of edges) into a proper edge (2 tuple)
 def face_to_edge(face):
     a, b, c = face
+    # euclidean distance is symmetric (a->b == b->a)
     # undirected graph, so use replacement
     return list(itertools.permutations([a, b, c], 2))
+
 
 if __name__ == '__main__':
     generate_graph('../meshes/mesh1.ply')

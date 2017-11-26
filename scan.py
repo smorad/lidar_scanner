@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# Lidar scanner implementation
+
 import time
 import math
 import pickle
@@ -7,6 +9,7 @@ import os
 import logging
 
 import servo
+from typing import List
 
 # Load .so for correct arch
 if os.uname().machine == 'x86_64':
@@ -22,7 +25,7 @@ class Lidar:
     scan_data = []
     port_opts = 'type=serial,device=/dev/ttyACM0,timeout=1'
 
-    def sys_init(self):
+    def sys_init(self) -> None:
         '''
         Lidar system init
         '''
@@ -39,12 +42,17 @@ class Lidar:
         self.servo = servo.Servo()
         self.sys_init()
 
-    def ensure_writable(self):
+    def ensure_writable(self) -> None:
+        '''Make sure there's a place for the data to go'''
         os.makedirs(self.DATA_PATH, exist_ok=True)
         os.access(self.DATA_PATH, os.W_OK | os.X_OK)
         logging.info('Verified scan write permissions')
 
-    def scan(self):
+    def scan(self) -> None:
+        '''
+        Scan ~170 degrees in rho axis, taking a 140 deg horizontal 
+        scan for each rho slice
+        '''
         # turns out the maximum angle is 89.xxx
         while(self.servo.phase_angle < 89):
                 logging.info(
@@ -69,10 +77,11 @@ class Lidar:
         z = r * math.cos(phi)
         return (x, y, z)
 
-    def scan_horizon(self, phi: float):
+    def scan_horizon(self, phi: float) -> List:
         '''
         Scans from theta_0 to theta_1 in rad, then saves the resulting data in
-        cartesian form. The hardware is limited to arcs of < 2 rad
+        cartesian form. The hardware is limited to arcs of < 2 rad. This will only scan
+        dZ in the XY plane.
         '''
         # according to docs:
         # 683 steps
@@ -96,15 +105,16 @@ class Lidar:
                     'Got bad r at theta: {:.2f} phi: {:.2f}'.format(theta, phi))
                 continue
             x, y, z = self.to_cartesian(r, theta, phi)
-            # We don't want to overwrite any data
-            #assert(x not in self.scan_data)
             # Save data for writing
             self.scan_data.append((x, y, z))
         
         r_values.clean_up()
         return self.scan_data
 
-    def write(self):
+    def write(self) -> None:
+        '''
+        Write pickled scan data to file
+        '''
         fname = 'scan-%d' % time.time()
         fpath = self.DATA_PATH + '/' + fname
         logging.info('Writing scan to %s...', fpath)
@@ -112,6 +122,9 @@ class Lidar:
             pickle.dump(self.scan_data, f)
 
     def draw_pointmap(self, data):
+        '''
+        Debug graphing
+        '''
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt

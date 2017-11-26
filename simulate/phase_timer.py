@@ -1,6 +1,7 @@
 import time
 
 class Timer:
+    '''Super ghetto timer'''
     def __enter__(self):
         self.t = time.time()
 

@@ -1,5 +1,8 @@
 import math
 
+# Just some utils that I want to use without create
+# circular deps
+
 RISK_WEIGHT = 0.25
 
 def euclidean_distance(a, b):

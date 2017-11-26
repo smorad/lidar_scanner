@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# Inits hardware PWM server and begins laser scan
+
 import scan
 import servo
 import time

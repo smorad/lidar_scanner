@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Install script as a service, so it starts on raspberry pi boot
+
 set -ex
 if [[ $EUID -ne 0 ]]; then
    echo "This script must be run as root" 
