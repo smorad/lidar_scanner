@@ -20,49 +20,15 @@ from graph_utils import compute_cost
 
 class Found(Exception): pass
 
+DATA_DIR = os.path.dirname(os.path.realpath(__file__)) + '/../data/'
 TEST = os.getenv('TEST')
 REGEN_GRAPH = os.getenv('GRAPH')
 REGEN_HOLDS = os.getenv('HOLDS')
 
 if TEST:
-    mesh = '../data/mesh1-superdecimated.ply'
+    mesh = DATA_DIR + 'mesh1-superdecimated.ply'
 else:
-    mesh = '../data/mesh1.ply'
-
-def main():
-
-    print('Generating graph...')
-    g = graph_constructor.generate_graph(mesh)
-    print('Searching for handholds...')
-    h = handhold_detectors.Planar(g)
-
-    ## Generate XYZ file for pics
-    with open('../data/handholds.xyz', 'w') as f:
-        for n in h.get_graph().nodes:
-            f.write('{} {} {}\n'.format(int(n.x), int(n.y), int(n.z)))
-
-    print([n for n in g.nodes if n.ID == 310])
-        
-    # These are good nodes
-    if TEST:
-        start = [n for n in h.g.nodes 
-                if abs(n.x - 553.117615) < 0.01 and
-                abs(n.y + -846.342651 < 0.01)]
-        end = [n for n in h.g.nodes 
-            if abs(n.x + 111.093) < 0.01 and
-                abs(n.y - 739.826) < 0.01]
-    else:
-        start = [n for n in h.g.nodes 
-            if abs(n.x - 258.258789) < 0.01 and
-            abs(n.y + 835.248047) < 0.01]
-
-        end = [n for n in h.g.nodes
-            if abs(n.x + 52.572998) < 0.01 and
-            abs(n.y - 1269.827271) < 0.01]
-    print('start', *start, 'end', *end)
-    with open('../data/shortest_path.xyz', 'w') as f:
-        for p in h.get_path(*start, *end):
-            f.write('{} {} {}\n'.format(int(p.x), int(p.y), int(p.z)))
+    mesh = DATA_DIR + 'mesh1.ply'
 
 def get_node(h, pos):
     '''Given node coords in h, return corresponding node in h.
@@ -102,11 +68,11 @@ def write_handholds(g=None):
     the handhold detector code
     '''
     if not g:
-        g = nx.read_gpickle('../data/graph.gpickle')
+        g = nx.read_gpickle(DATA_DIR + 'graph.gpickle')
     print('Searching for handholds...')
     h = handhold_detectors.Planar(g)
     h.get_graph()
-    with open('../data/handhold.pickle', 'wb+') as f:
+    with open(DATA_DIR + 'handhold.pickle', 'wb+') as f:
         pickle.dump(h, f)
 
 def multi_bot(bots=4, cache=True):
@@ -117,22 +83,18 @@ def multi_bot(bots=4, cache=True):
     tether_distance from the other bots.help
     '''
     print('Loading graph...')
-    g = nx.read_gpickle('../data/graph.gpickle')
+    g = nx.read_gpickle(DATA_DIR + 'graph.gpickle')
     print('Loading handholds...')
-    with open('../data/handhold.pickle', 'rb') as f:
+    with open(DATA_DIR + 'handhold.pickle', 'rb') as f:
         h = pickle.load(f)
 
     ## Generate XYZ file for pics
-    with open('../data/handholds.xyz', 'w') as f:
+    with open(DATA_DIR + 'handholds.xyz', 'w') as f:
         for n in h.g.nodes:
             f.write('{} {} {}\n'.format(n.x, n.y, n.z))
 
     # These look like good node positions
     START_NODE_POS = [
-        #(417.507, -744.396, -33.9633),
-        #(433.345, -738.355, -33.6464),
-        #(423.88, -759.175, -33.5664),
-        #(440.459, -752.136, -35.0659),
         (543.18, -696.065, -28.9262),
         (518.1, -687.459, -23.527),
         (524.652, -667.315, -20.868),
@@ -167,20 +129,18 @@ def multi_bot(bots=4, cache=True):
                 bot.node.occupied = False
                 bot.node = path_nodes[1]
                 path_nodes[1].occupied = bot
-                if path_nodes[1].ID == end_node.ID:
-                    print('Reached goal')
-                    # Make sure we add the goal node before terminating
-                    bot.path.append((turn, bot.node.x, bot.node.y, bot.node.z))
+                if end_node.occupied: 
                     raise Found
     except Found:
         print('{} reached end node'.format(end_node.occupied.id))
         print('final pos: ', [bot.node for bot in bots])
         print('Saving paths...')
         for bot in bots:
-            with open('../data/bot{}-path'.format(bot.id), 'w+') as f:
+            # Save paths for analysis
+            with open(DATA_DIR + 'bot{}-path'.format(bot.id), 'w+') as f:
                 for move in bot.path:
                     f.write('{} {} {} {}\n'.format(bot.id, move[1], move[2], move[3]))
-            with open('../data/bot{}-path.xyz'.format(bot.id), 'w+') as f:
+            with open(DATA_DIR + 'bot{}-path.xyz'.format(bot.id), 'w+') as f:
                 for move in bot.path: 
                     f.write('{} {} {}\n'.format(move[1], move[2], move[3]))
 

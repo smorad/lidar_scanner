@@ -16,9 +16,9 @@ def bounded_leg_astar(G,
     # stolen and modified from networkx library
     '''
     Given a graph, source, and sink compute a path from the source to sink. 
-    The leg distance (not edge weight) is bounded as our hopping robot does not
-    have unlimited hop distance. This function will also skip nodes occupied
-    by other robots.
+    The leg distance (not edge weight) is bounded as our hopping/climbing robot does not
+    have unlimited hop/reach distance. This function will also skip nodes occupied
+    by other robots, and will respect the tether length of each robot.
     '''
     if G.is_multigraph():
         raise NetworkXError("astar_path() not implemented for Multi(Di)Graphs")
@@ -68,13 +68,13 @@ def bounded_leg_astar(G,
             if neighbor in explored:
                 continue
             # we want bound to be distance only (no risk/weight)
-            #if euclidean_distance(curnode, neighbor) > bound_dist:
             # ensure only one edge from a to b
             if w['dist'] > bound_dist:
                 continue
             # node is already occupied by another bot
             if neighbor.occupied:
                 continue
+            # Ensure we don't leave tether range
             for bot_node in bot_nodes:
                 if euclidean_distance(neighbor,
                                       bot_node) > bot_node.tether_distance:

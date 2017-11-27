@@ -83,7 +83,6 @@ def compute_flatness(graph, node, distance=300, alpha=0.1) -> float:
     # We don't really care how well the model predicts,
     # because it will only be "predicting" points its already seen
     # we only care how different the plane is from the surface
-    #model_loss = 1 - abs(model.score(X, t))
     model_loss = metrics.mean_squared_error(t, model.predict(X))
 
     # find normal to plane
