@@ -1,3 +1,14 @@
+# INFO521 HEADER
+
+Usage: Please refer to section 5 "Results and Replication" for how to run this
+If you're too lazy to read it, here's the TL;DR
+you need python3 with networkx, scipy, numpy, and plyfile
+then do: $ ./simulate/simulate.py
+it will load the previously generated data (refer to section 5 on how to regenerate the data yourself) and will run shortest path algorithms for four limbs. It will print the movements of these limbs to stdout.
+
+This is hosted privately on github, I can add you if you are interested in the revision history or would like a more up to date version. The version before you is cut from the `ml-project` github branch.
+
+
 # 3D Lidar scanner and path planner in python using a hoyuko rangefinder 
 # Path Planning:
 Has multiple ways to chart a course on a surface
