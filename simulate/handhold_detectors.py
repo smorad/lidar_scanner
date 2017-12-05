@@ -37,11 +37,13 @@ def euclidean_neighbors(graph, node, distance):
     return g.nodes
 
 
-def compute_flatness_model_loss(graph, node, distance=20) -> float:
+def compute_flatness_model_loss(graph, node, distance=300) -> float:
     '''
     Given a node, return a score denoting how flat the immediate
     area around the node is. The lower the score, the flatter it is, with
     a score of 0 meaning the surface is a plane.
+
+    This will return the MSE off the linear model.
     '''
     neighbors = euclidean_neighbors(graph, node, distance)
     X = [(n.x, n.y) for n in neighbors]
@@ -51,10 +53,10 @@ def compute_flatness_model_loss(graph, node, distance=20) -> float:
     # Get the best fit plane to the surface
     model = regression.fit(X, t)
 
-    # Score the fit using R^2
+    # Score the fit using MSE
     # We don't really care how well the model predicts,
     # we only care how different the plane is from the surface
-    model_loss = 1 - abs(model.score(X, t))
+    model_loss = metrics.mean_squared_error(t, model.predict(X))
 
     return model_loss
 
@@ -108,6 +110,9 @@ def compute_flatness(graph, node, distance=300, alpha=0.1) -> float:
     #return model_loss
 
 def compute_flatness_convolution(graph, node, distance=5) -> float:
+    '''
+    Compute flatness using the convolution method
+    '''
     neighbors = euclidean_neighbors(graph, node, distance)
     X = [(n.x, n.y) for n in neighbors]
     t = [n.z for n in neighbors]
@@ -234,7 +239,7 @@ class Planar(HandHoldGraph):
     '''For microspine grippers. Search for a flat, planar surface.'''
 
     def get_graph(self, percentile=15):
-        '''Get emst with the flattest surfaces'''
+        '''Get graph of only the flattest surfaces'''
         assert (percentile > 0 and percentile < 100)
 
         print('Computing flatness for {} verticies...'.format(

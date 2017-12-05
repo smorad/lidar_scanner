@@ -46,8 +46,6 @@ def get_node(h, pos):
 
 
 class Bot:
-    node = None
-
     def __init__(self, id, start, tether_distance=500):
         self.id = id
         self.node = start
@@ -102,7 +100,7 @@ def multi_bot(bots=4, cache=True):
     ]
 
 
-    END_NODE_POS = (-26.453, 1181.19, 337.438)#(-35.7883, 1210.73, 328.319)
+    END_NODE_POS = (-26.453, 1181.19, 337.438)
 
     start_nodes = [get_node(h.g, pos) for pos in START_NODE_POS]
     end_node = get_node(h.g, END_NODE_POS)
@@ -113,6 +111,7 @@ def multi_bot(bots=4, cache=True):
     # they can't occupy the same space, and cannot go further
     # than Bot.tether_length from the other bots
     bots = [Bot(i, node, 500) for i, node in enumerate(start_nodes)] 
+    print('bots', [b.node for b in bots])
     turn = 0
     try:
         while True:
@@ -132,7 +131,7 @@ def multi_bot(bots=4, cache=True):
                 if end_node.occupied: 
                     raise Found
     except Found:
-        print('{} reached end node'.format(end_node.occupied.id))
+        print('Bot {} reached end node'.format(end_node.occupied.id))
         print('final pos: ', [bot.node for bot in bots])
         print('Saving paths...')
         for bot in bots:
