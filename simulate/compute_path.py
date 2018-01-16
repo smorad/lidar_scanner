@@ -11,8 +11,8 @@ def bounded_leg_astar(G,
                       target,
                       heuristic=None,
                       weight='weight',
-                      bound_dist=300,
-                      bot_nodes=[]):
+                      bound_dist=250,
+                      bots=[]):
     # stolen and modified from networkx library
     '''
     Given a graph, source, and sink compute a path from the source to sink. 
@@ -27,6 +27,9 @@ def bounded_leg_astar(G,
         # The default heuristic is h=0 - same as Dijkstra's algorithm
         def heuristic(u, v):
             return 0
+
+    if not bots:
+        print('Warning: no bots passed to a*, this should only happen if you are using one bot')
 
     push = heappush
     pop = heappop
@@ -74,11 +77,16 @@ def bounded_leg_astar(G,
             # node is already occupied by another bot
             if neighbor.occupied:
                 continue
+
             # Ensure we don't leave tether range
-            for bot_node in bot_nodes:
+            tether_exceeded = False
+            for bot in bots:
                 if euclidean_distance(neighbor,
-                                      bot_node) > bot_node.tether_distance:
-                    continue
+                                      bot.node) > bot.tether_distance:
+                    tether_exceeded = True
+            if tether_exceeded:
+                continue
+
             # cost should also include risk
             ncost = dist + w.get(weight, 1)
             if neighbor in enqueued:

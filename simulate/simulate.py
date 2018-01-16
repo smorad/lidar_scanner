@@ -16,7 +16,7 @@ import math
 import matplotlib
 
 from compute_path import bounded_leg_astar
-from graph_utils import compute_cost
+from graph_utils import compute_cost, euclidean_distance
 
 class Found(Exception): pass
 
@@ -24,11 +24,16 @@ DATA_DIR = os.path.dirname(os.path.realpath(__file__)) + '/../data/'
 TEST = os.getenv('TEST')
 REGEN_GRAPH = os.getenv('GRAPH')
 REGEN_HOLDS = os.getenv('HOLDS')
+ITOKAWA = os.getenv('ITOKAWA')
 
 if TEST:
     mesh = DATA_DIR + 'mesh1-superdecimated.ply'
+elif ITOKAWA:
+    mesh = DATA_DIR + 'itokawa_f0196608.ply'
 else:
     mesh = DATA_DIR + 'mesh1.ply'
+
+print('Loading mesh {}...'.format(mesh))
 
 def get_node(h, pos):
     '''Given node coords in h, return corresponding node in h.
@@ -42,11 +47,11 @@ def get_node(h, pos):
                 math.isclose(n.z, pos[2], rel_tol = 0.01):
             return n
 
-    print('Warning, node ', id, ' not in h')
+    print('Warning, node ', pos, ' not in h')
 
 
 class Bot:
-    def __init__(self, id, start, tether_distance=500):
+    def __init__(self, id, start, tether_distance=250):
         self.id = id
         self.node = start
         self.tether_distance = tether_distance
@@ -68,7 +73,7 @@ def write_handholds(g=None):
     if not g:
         g = nx.read_gpickle(DATA_DIR + 'graph.gpickle')
     print('Searching for handholds...')
-    h = handhold_detectors.Planar(g)
+    h = handhold_detectors.Maxima(g)
     h.get_graph()
     with open(DATA_DIR + 'handhold.pickle', 'wb+') as f:
         pickle.dump(h, f)
@@ -93,24 +98,40 @@ def multi_bot(bots=4, cache=True):
 
     # These look like good node positions
     START_NODE_POS = [
+        (-249.14, 27.9, -34.4),
         (543.18, -696.065, -28.9262),
         (518.1, -687.459, -23.527),
         (524.652, -667.315, -20.868),
         (550.481, -675.239, -23.726)
     ]
-
-
     END_NODE_POS = (-26.453, 1181.19, 337.438)
 
+    if ITOKAWA:
+        START_NODE_POS = [
+            (-253.16, -12.39, -14.45),
+            (-252.87, -6.67, -16.96),
+            (-253.90, -10.44, -9.77),
+            (-253.79, -3.99, -10.65)
+        ]
+
+        #END_NODE_POS = (127.71, 67.21, 68.44)
+        END_NODE_POS = (33.33, 114.62, 16.09)
+
+
+    #sorted_nodes = sorted(h.g.nodes(), key=lambda n: n.x ** 2 + n.y ** 2 + n.z ** 2)
+    print(h.g.number_of_nodes())
+    print(h.g.number_of_edges())
     start_nodes = [get_node(h.g, pos) for pos in START_NODE_POS]
+    #start_nodes = sorted_nodes[:4]
     end_node = get_node(h.g, END_NODE_POS)
+    #end_node = sorted_nodes[250]
     # Make sure that we actually find the nodes...
     assert(any(start_nodes))
 
     # Run a simulation with bots tethered to each other
     # they can't occupy the same space, and cannot go further
     # than Bot.tether_length from the other bots
-    bots = [Bot(i, node, 500) for i, node in enumerate(start_nodes)] 
+    bots = [Bot(i, node, 350) for i, node in enumerate(start_nodes)] 
     print('bots', [b.node for b in bots])
     turn = 0
     try:
@@ -122,7 +143,8 @@ def multi_bot(bots=4, cache=True):
                     h.g, 
                     bot.node, 
                     end_node, 
-                    heuristic=compute_cost
+                    heuristic=compute_cost,
+                    bots=[b for b in bots if b.id != bot.id]
                 )
                 print('{}: {}: {} -> {}'.format(len(bot.path), bot.id, bot.node, path_nodes[1]))
                 bot.node.occupied = False
@@ -133,6 +155,12 @@ def multi_bot(bots=4, cache=True):
     except Found:
         print('Bot {} reached end node'.format(end_node.occupied.id))
         print('final pos: ', [bot.node for bot in bots])
+        for bot1 in bots:
+            for bot2 in bots:
+                if bot1 == bot2:
+                    continue
+                print('bot {} is {} units away from {}'.format(
+                    bot1.id, euclidean_distance(bot1.node, bot2.node), bot2.id))
         print('Saving paths...')
         for bot in bots:
             # Save paths for analysis

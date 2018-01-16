@@ -20,12 +20,33 @@ import phase_timer
 from graph_utils import euclidean_distance, compute_cost
 
 
+flat_q = multiprocessing.Queue()
+
 def find_local_maximum(graph, node):
-    heights = [neighbor.z for neighbor in graph.neighbors(node)]
-    is_maximum = all([node.z >= height for height in heights])
+    '''
+    Find maxima in all 3 axes. These are things protruding from the surface
+    outwards. The "maxima" must be at local to two points out in each direction
+    '''
+    neighbors = graph.neighbors(node)
+    neighbor_absolute_heights = [n.x ** 2 + n.y ** 2 + n.z ** 2 for n in neighbors]
+    absolute_height = node.x ** 2 + node.y ** 2 + node.z ** 2
+    is_maximum = all(absolute_height >= n_abs_height for n_abs_height in neighbor_absolute_heights)
     if is_maximum:
         return node
     return None
+
+def find_protrusions(graph, cutoff=0.9):
+    '''
+    Finds points x% higher than geoid (sealevel)
+    '''
+    pass
+
+def score_local_maximum(graph, node):
+    '''
+    Given a local maxima, return a score denoting how 'big' of a local maxima it is
+    '''
+    dists = [euclidean_distance(node, n) for n in graph.neighbors(node)]
+    return 0.1 * sum(dists)
 
 
 def euclidean_neighbors(graph, node, distance):
@@ -57,12 +78,11 @@ def compute_flatness_model_loss(graph, node, distance=300) -> float:
     # We don't really care how well the model predicts,
     # we only care how different the plane is from the surface
     model_loss = metrics.mean_squared_error(t, model.predict(X))
-
     return model_loss
 
 
 
-def compute_flatness(graph, node, distance=300, alpha=0.1) -> float:
+def compute_flatness(graph, node, distance=50, alpha=0.1) -> float:
     '''
     Given a node, return a score denoting how flat the immediate
     area around the node is. The lower the score, the flatter it is, with
@@ -97,6 +117,12 @@ def compute_flatness(graph, node, distance=300, alpha=0.1) -> float:
     node_surface = [(n.x, n.y, n.z) for n in graph.neighbors(node)]
     # Get the point gradient at each point in the surface
     point_gradients = numpy.gradient(node_surface)
+
+    # Give us some indication of our progress
+    flat_q.put_nowait(None)
+    pct = 100 * flat_q.qsize() / graph.number_of_nodes()
+    print('{:.2f}%'.format(pct), end='\r')
+
     # We don't need to ensure that the normals are pointing towards the positive z direction
     # because the xproduct of vectors in opposite directions is also 0.
     # However, the cross product between the plane normal and all the surface normals
@@ -197,6 +223,7 @@ class HandHoldGraph:
         spanning tree) of the graph.
         '''
         print('Building edges...')
+        print(len(nodes))
         with phase_timer.Timer():
             g = nx.DiGraph()
             g.add_nodes_from(nodes)
@@ -247,7 +274,7 @@ class Planar(HandHoldGraph):
         with phase_timer.Timer():
             # sklearn is super duper slow to generate linear models
             # sidestep python GIL, and raise the temp of my room 5 degrees
-            p = multiprocessing.Pool(16)
+            p = multiprocessing.Pool(12)
             flatness_losses = p.starmap(
                 compute_flatness, [(self._g, node) for node in self._g.nodes])
             # I hope the node iterator is ordered...
@@ -263,7 +290,7 @@ class Planar(HandHoldGraph):
 
 
 class Maxima(HandHoldGraph):
-    def get_graph(self):
+    def get_graph(self, distance=50):
         '''
         Return a graph of handholds
         '''
@@ -276,5 +303,8 @@ class Maxima(HandHoldGraph):
         # For some reason if we leave maxima as a filter object weird things
         # happen, like the list being empty after iterating thru it
         maxima = list(maxima)
-        self._build_emst(maxima)
+        for node in maxima:
+            node.loss = score_local_maximum(self._g, node)
+        neighbors = euclidean_neighbors(self._g, node, distance)
+        self.build_edges(maxima)
         return self.g
