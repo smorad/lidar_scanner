@@ -35,10 +35,23 @@ def find_local_maximum(graph, node):
         return node
     return None
 
+def find_local_maxima_local_frame(graph, node):
+    '''
+    Find maxima in SphereX reference frame. This should be the Z axis.
+    This should be implemented better in the future, the local frame
+    should change each hop.
+    '''
+    heights = [neighbor.z for neighbor in graph.neighbors(node)]
+    is_maximum = all([node.z >= height for height in heights])
+    if is_maximum:
+        return node
+    return None
+
 def find_protrusions(graph, cutoff=0.9):
     '''
     Finds points x% higher than geoid (sealevel)
     '''
+    # Maybe find the biggest Y values in the bot's reference frame?
     pass
 
 def score_local_maximum(graph, node):
@@ -298,7 +311,7 @@ class Maxima(HandHoldGraph):
         # because 0 could potentially be a max
         maxima = filter(
             lambda x: x != None,
-            [find_local_maximum(self._g, node) for node in self._g.nodes])
+            [find_local_maximum_local_frame(self._g, node) for node in self._g.nodes])
 
         # For some reason if we leave maxima as a filter object weird things
         # happen, like the list being empty after iterating thru it
