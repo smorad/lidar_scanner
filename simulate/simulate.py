@@ -73,7 +73,8 @@ def write_handholds(g=None):
     if not g:
         g = nx.read_gpickle(DATA_DIR + 'graph.gpickle')
     print('Searching for handholds...')
-    h = handhold_detectors.Maxima(g)
+    #h = handhold_detectors.Maxima(g)
+    h = handhold_detectors.Planar(g)
     h.get_graph()
     with open(DATA_DIR + 'handhold.pickle', 'wb+') as f:
         pickle.dump(h, f)
@@ -108,14 +109,29 @@ def multi_bot(bots=4, cache=True):
 
     if ITOKAWA:
         START_NODE_POS = [
-            (-253.16, -12.39, -14.45),
-            (-252.87, -6.67, -16.96),
-            (-253.90, -10.44, -9.77),
-            (-253.79, -3.99, -10.65)
+            # MAXIMA
+            #(-87.43, 50.58, 111.15),
+            #(-90.38, 41, 108.55),
+            #(-81.549, 39.78, 110.72),
+            #(-70.25, 62.9, 106.7),
+            # PLANAR
+            (-159.38, -119.26, 15.17),
+            (-162.14, -118.72, 14.44),
+            (-162.10, -118.41, 15.70),
+            (-159.33, -118.92, 16.42)
+
         ]
 
-        #END_NODE_POS = (127.71, 67.21, 68.44)
-        END_NODE_POS = (33.33, 114.62, 16.09)
+        # MAXIMA
+        #END_NODE_POS = (140.88, -22.55, 113.61)
+        # PLANAR
+        #END_NODE_POS = (94.06, 89.07, 74.53)
+        #END_NODE_POS = (-69.78, -7.15, -105.94)
+        # Works
+        #END_NODE_POS = (-161.405, -115.7, 25.83)
+        # Works
+        #END_NODE_POS = (-135.54, -56.34, 77.56)
+        END_NODE_POS = (-61.57, 21.41, 116.34)
 
 
     #sorted_nodes = sorted(h.g.nodes(), key=lambda n: n.x ** 2 + n.y ** 2 + n.z ** 2)
@@ -131,7 +147,7 @@ def multi_bot(bots=4, cache=True):
     # Run a simulation with bots tethered to each other
     # they can't occupy the same space, and cannot go further
     # than Bot.tether_length from the other bots
-    bots = [Bot(i, node, 350) for i, node in enumerate(start_nodes)] 
+    bots = [Bot(i, node, 250) for i, node in enumerate(start_nodes)] 
     print('bots', [b.node for b in bots])
     turn = 0
     try:

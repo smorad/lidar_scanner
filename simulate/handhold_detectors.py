@@ -28,8 +28,8 @@ def find_local_maximum(graph, node):
     outwards. The "maxima" must be at local to two points out in each direction
     '''
     neighbors = graph.neighbors(node)
-    neighbor_absolute_heights = [n.x ** 2 + n.y ** 2 + n.z ** 2 for n in neighbors]
-    absolute_height = node.x ** 2 + node.y ** 2 + node.z ** 2
+    neighbor_absolute_heights = [(n.x ** 2, n.y ** 2,  n.z ** 2) for n in neighbors]
+    absolute_height = (node.x ** 2, node.y ** 2, node.z ** 2)
     is_maximum = all(absolute_height >= n_abs_height for n_abs_height in neighbor_absolute_heights)
     if is_maximum:
         return node
@@ -311,7 +311,7 @@ class Maxima(HandHoldGraph):
         # because 0 could potentially be a max
         maxima = filter(
             lambda x: x != None,
-            [find_local_maximum_local_frame(self._g, node) for node in self._g.nodes])
+            [find_local_maxima_local_frame(self._g, node) for node in self._g.nodes])
 
         # For some reason if we leave maxima as a filter object weird things
         # happen, like the list being empty after iterating thru it
