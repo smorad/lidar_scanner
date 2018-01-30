@@ -51,11 +51,12 @@ def get_node(h, pos):
 
 
 class Bot:
-    def __init__(self, id, start, tether_distance=250):
+    def __init__(self, id, start, tether_distance=50):
         self.id = id
         self.node = start
         self.tether_distance = tether_distance
         self.path = []
+        self.total_dist = 0
 
 
 def write_graph():
@@ -164,6 +165,7 @@ def multi_bot(bots=4, cache=True):
                 )
                 print('{}: {}: {} -> {}'.format(len(bot.path), bot.id, bot.node, path_nodes[1]))
                 bot.node.occupied = False
+                bot.total_dist += euclidean_distance(bot.node, path_nodes[1])
                 bot.node = path_nodes[1]
                 path_nodes[1].occupied = bot
                 if end_node.occupied: 
@@ -179,6 +181,8 @@ def multi_bot(bots=4, cache=True):
                     bot1.id, euclidean_distance(bot1.node, bot2.node), bot2.id))
         print('Saving paths...')
         for bot in bots:
+            # Print stats
+            print('{} moved {} total distance units'.format(bot.id, bot.total_dist))
             # Save paths for analysis
             with open(DATA_DIR + 'bot{}-path'.format(bot.id), 'w+') as f:
                 for move in bot.path:
