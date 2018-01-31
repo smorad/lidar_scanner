@@ -278,7 +278,7 @@ class HandHoldGraph:
 class Planar(HandHoldGraph):
     '''For microspine grippers. Search for a flat, planar surface.'''
 
-    def get_graph(self, percentile=15):
+    def get_graph(self, percentile=25):
         '''Get graph of only the flattest surfaces'''
         assert (percentile > 0 and percentile < 100)
 

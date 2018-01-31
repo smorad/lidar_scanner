@@ -12,6 +12,13 @@ def euclidean_distance(a, b):
         (a.z - b.z) ** 2
     )
 
+def euclidean_distance_c(a, t):
+    return math.sqrt(
+        (a.x - t[0]) ** 2 +
+        (a.y - t[1]) ** 2 + 
+        (a.z - t[2]) ** 2
+    )
+
 def compute_cost(a, b):
     '''Compute cost (distance and risk)'''
     return euclidean_distance(a, b) + RISK_WEIGHT * b.loss
